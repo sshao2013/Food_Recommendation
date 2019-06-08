@@ -42,21 +42,5 @@ class AR(object):
         return final_result
 
 
-# df = pd.read_pickle('meal_data.pkl')
-# df = df['food_codes'].tolist()
-# trained = AR(df)
-# print(trained.recommend(['TAFF', 'PCSP', 'COLA', 'CRNT', 'BGMA', 'BEGG']))
-
-
 trained = AR(TRANSACTIONS)
 print(trained.recommend(['b','d']))
-# print(trained.recommend(["a", "b", "d"]))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
-# print(trained.recommend('d'))
-#
-# print(trained.recommend(['a', 'd', 'b', 'c']))
-
-# new_trans = ["a", "b", "d"]
-# trained.add_transaction(new_trans)
-# print(trained.recommend('a'))

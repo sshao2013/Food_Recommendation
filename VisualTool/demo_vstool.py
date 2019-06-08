@@ -1,5 +1,6 @@
 import itertools
 import pandas as pd
+import json
 
 TRANSACTIONS = [
     ["a", "b", "c", "d"],
@@ -8,7 +9,11 @@ TRANSACTIONS = [
 ]
 
 TRANSACTIONS2 = [
-    ['a', 'b'], ['a', 'd', 'c']
+    ["a", "b", "c", "d"],
+    ["b", "d", "f", "c"],
+    ["e", "c"],
+    ["a", "e"],
+    ["b", "e"]
 ]
 
 
@@ -20,7 +25,6 @@ class PAR(object):
         self.cooccurrence_map = dict()
         for t in transactions:
             self.add_transaction(t)
-        self.total_count = len(transactions)
 
     def add_transaction(self, transaction):
         transaction = list(set(transaction))
@@ -47,14 +51,8 @@ class PAR(object):
         transaction = list(set(transaction))
         oc_map = self.occurrence_map
         cc_map = self.cooccurrence_map
-        # recs = [
-        #     (k, v, oc_map.get(t))
-        #     for t in transaction
-        #     for k, v in cc_map.get(t, dict()).items()
-        #     if k not in transaction
-        # ]
         recs = [
-            (k, v, oc_map.get(t), oc_map.get(k))
+            (k, v, oc_map.get(t))
             for t in transaction
             for k, v in cc_map.get(t, dict()).items()
             if k not in transaction
@@ -65,50 +63,55 @@ class PAR(object):
         for k, agg in itertools.groupby(sorted(recs, key=lambda x: x[0]), lambda x: x[0]):
             probs = []
             occs = []
-            rpf = []
-            result_p = []
-            convic = []
             for p in agg:
-                probs += [max(p[1] / p[2], p[1]/p[3])]
-                occs += [p[2]/self.total_count]
-                result_p += [p[1]]
-                rpf += [p[1] * p[1] / p[2]]
-                convic += [(1 - p[3] / self.total_count) / (1 - p[1] / p[2])]
-            result_a = sum(probs) * sum(occs)
-            result_b = sum(rpf)
-            agg_prob += [(k, sum(probs) * sum(occs) + sum(rpf))]
+                probs += [p[1] / p[2]]
+                occs += [p[2]]
+            agg_prob += [(k, sum(probs) * sum(occs))]
         agg_prob = sorted(agg_prob, key=lambda x: x[1], reverse=True)
         return agg_prob
 
+    def generate_vsjson(self, recommend, transaction):
+        data = {}
+        data['nodes'] = []
+        data['links'] = []
+        data['nodes'].append({
+            'id': ','.join(transaction),
+            'group': 1,
+            'hgt': 8})
+        count = 0
+        length_bia = 0
+        for item in recommend:
+            if count < 5:
+                group_num = 2
+                length_bia = 5
+            elif count < 15:
+                group_num = 3
+                length_bia = 50
+            else:
+                group_num = 4
+                length_bia = 100
+            data['nodes'].append({
+                'id': item[0],
+                'group': group_num
+            })
+            data['links'].append({
+                'source': ','.join(transaction),
+                'target': item[0],
+                'value': length_bia
+            })
+            count += 1
+            if count > 30:
+                break
 
-# df = pd.read_pickle('meal_data.pkl')
-# df = df['food_codes'].tolist()
-# trained = PAR(df)
-# print(trained.recommend(['WALK', 'TNGS', 'OASI', 'WGPS']))
+        #change to the path you want
+        with open('/Users/sshao/Documents/NCL/CS8499/RS/demo/datasets/datatest.json', 'w') as outfile:
+            json.dump(data, outfile)
 
-# df = pd.read_pickle('meal_data.pkl')
-# df = df['food_codes'].tolist()
-# trained = PAR(df)
-# print(trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG']))
-# print(len(trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG'])))
 
-# df = pd.read_pickle('meal_data.pkl')
-# df = df['food_codes'].tolist()
-# trained = PAR(df)
-# print(trained.recommend(['TAFF']))
+df = pd.read_pickle('meal_data.pkl')
+df = df['food_codes'].tolist()
+trained = PAR(df)
+recommendation = trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG'])
+print(recommendation)
+trained.generate_vsjson(recommendation, ['TWTR', 'BBCT', 'PSFB', 'WFLG'])
 # print(trained.recommend(['TAFF', 'PCSP', 'COLA', 'CRNT', 'BGMA', 'BEGG']))
-
-
-trained = PAR(TRANSACTIONS2)
-# print(trained.recommend('a'))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
-print(trained.recommend(['b', 'd']))
-# print(trained.recommend(['a', 'b', 'c', 'd']))
-# print(trained.recommend(['a']))
-
-# trained = PAR(TRANSACTIONS2)
-# print(trained.recommend(['a','f']))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
-# print(trained.recommend('d'))

@@ -10,12 +10,6 @@ TRANSACTIONS = [
     ["b", "d", "e"]
 ]
 
-TRANSACTIONS2 = [
-    ["a", "b", "c", "d"],
-    ["b", "a", "d", "f"],
-    ["d", "e"]
-]
-
 class PAR_New(object):
 
     def __init__(self, transactions):
@@ -75,10 +69,6 @@ class PAR_New(object):
 # trained = PAR_New(df)
 # print(trained.recommend(['TAFF', 'PCSP', 'COLA', 'CRNT', 'BGMA', 'BEGG']))
 
-trained = PAR_New(TRANSACTIONS2)
-# print(trained.recommend('a'))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
+trained = PAR_New(TRANSACTIONS)
 print(trained.recommend(['a', 'b', 'd']))
-# print(trained.recommend(['a', 'b', 'c', 'd']))
-# print(trained.recommend(['a', 'f']))
+

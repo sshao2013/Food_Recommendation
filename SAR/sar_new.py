@@ -9,25 +9,14 @@ TRANSACTIONS = [
     ["b", "d", "e"]
 ]
 
-# TRANSACTIONS2 = [
-#     ['a','b','c'],['a','d','c']
-# ]
-
-TRANSACTIONS2 = [
-    ["a", "b", "c"],
-    ["b", "a", "d"],
-    ["d", "e"],
-]
-
-
-class PAR_Third(object):
+class SAR(object):
 
     def __init__(self, transactions):
         self.transactions = transactions
         self.total_count = len(self.transactions)
-        self.rule_list, self.freq_list = self.PAR(self.transactions)
+        self.rule_list, self.freq_list = self.SAR(self.transactions)
 
-    def PAR(self, transaction):
+    def SAR(self, transaction):
         MAX_MEMORY = "12g"
         spark = SparkSession.builder.master("local").config("spark.memory.fraction", 0.8) \
             .config("spark.executor.memory", MAX_MEMORY) \
@@ -90,18 +79,3 @@ class PAR_Third(object):
             result[item[0]] = item[1] * result_x[item[0]]
         return sorted([(k, v) for k, v in result.items()], key=lambda x: x[1], reverse=True)
 
-
-df = pd.read_pickle('meal_data.pkl')
-df = df['food_codes'].tolist()
-trained = PAR_Third(df)
-print(trained.recommend(['BANA', 'TWTR', 'BTEA', 'SMLK']))
-# print(trained.recommend(['WALK', 'TNGS', 'OASI', 'WGPS']))
-
-
-# trained = PAR_Third(TRANSACTIONS2)
-# print(trained.recommend('a'))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
-# print(trained.recommend(['a', 'b', 'd']))
-# print(trained.recommend(['a', 'b', 'c', 'd']))
-# print(trained.recommend(['a', 'd']))

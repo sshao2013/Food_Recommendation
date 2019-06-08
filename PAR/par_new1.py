@@ -1,5 +1,5 @@
 import itertools
-import json
+
 import pandas as pd
 
 from pyspark.ml.fpm import FPGrowth
@@ -10,12 +10,6 @@ TRANSACTIONS = [
     ["a", "b", "c", "d"],
     ["a", "b", "d", "e"],
     ["b", "d", "e"]
-]
-
-TRANSACTIONS2 = [
-    ["a", "b", "c", "d"],
-    ["b", "a", "d", "c"],
-    ["d", "e"]
 ]
 
 
@@ -33,30 +27,23 @@ class PAR_New(object):
         self.par_result = self.PAR(self.transactions)
 
     def PAR(self, transaction):
-        MAX_MEMORY = "10g"
+        MAX_MEMORY = "14g"
         spark = SparkSession.builder.master("local").config("spark.memory.fraction", 0.8) \
-            .config("spark.executor.heartbeatInterval", "1000") \
-            .config("spark.network.timeout", "1200") \
-            .config("spark.executor.memory", "14g") \
-            .config("spark.driver.memory", "14g") \
-            .config("spark.executor.extraJavaOptions", "Xmx8024m") \
-            .config("spark.sql.shuffle.partitions", "1000") \
-            .config("spark.driver.maxResultSize", "0") \
-            .config("spark.sql.autoBroadcastJoinThreshold", "-1") \
-            .config("spark.executor.cores", "4").getOrCreate()
+            .config("spark.executor.memory", MAX_MEMORY) \
+            .config("spark.driver.memory", MAX_MEMORY).getOrCreate()
 
         R = Row('ID', 'items')  # use enumerate to add the ID column
         df = spark.createDataFrame([R(i, x) for i, x in enumerate(transaction)])
 
-        fp_growth = FPGrowth(itemsCol='items', minSupport=(0.001), minConfidence=(0.001), numPartitions=200)
+        fp_growth = FPGrowth(itemsCol='items', minSupport=(0.001), minConfidence=(0.001), numPartitions=100)
         freq = fp_growth.fit(df).freqItemsets.collect()
-        rule = fp_growth.fit(df).associationRules.collect()
 
         supp_x = sorted(list(filter(lambda x: len(x[0]) == 1, freq)))
         supp_xy = sorted(list(filter(lambda x: len(x[0]) == 2, freq)))
         supp_x = {k[0]: v for k, v in supp_x if k[0] != '$MISS'}
         supp_xy = list(filter(lambda k: k[0][0] != '$MISS' and k[0][1] != '$MISS', supp_xy))
 
+        # Rule Power Factor (RPF)
         par_result = dict()
 
         for i, j in supp_x.items():
@@ -91,64 +78,16 @@ class PAR_New(object):
                 probs += [p[1][1] / p[2]]
                 occs += [p[2]]
                 rpf += [p[1][0]]
-            agg_prob += [(k, sum(probs) * sum(occs) + sum(rpf))]
+            agg_prob += [(k, sum(probs) * (sum(occs)) + sum(rpf))]
 
         agg_prob = sorted(agg_prob, key=lambda x: x[1], reverse=True)
         return agg_prob
-
-    def generate_vsjson(self, recommend, transaction):
-
-        data = {}
-        data['nodes'] = []
-        data['links'] = []
-        data['nodes'].append({
-            'id': ','.join(transaction),
-            'group': 1,
-            'hgt': 8})
-        count = 0
-        length_bia = 0
-        for item in recommend:
-            if count < 5:
-                group_num = 2
-                length_bia = 5
-            elif count < 15:
-                group_num = 3
-                length_bia = 50
-            else:
-                group_num = 4
-                length_bia = 100
-            data['nodes'].append({
-                'id': item[0],
-                'group': group_num
-            })
-            data['links'].append({
-                'source': ','.join(transaction),
-                'target': item[0],
-                'value': length_bia
-            })
-            count += 1
-            if count > 30:
-                break
-
-        with open('/Users/sshao/Documents/NCL/CS8499/RS/demo/datasets/datatest.json', 'w') as outfile:
-            json.dump(data, outfile)
 
 
 df = pd.read_pickle('meal_data.pkl')
 df = df['food_codes'].tolist()
 trained = PAR_New(df)
-recommendation = trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG'])
-print(recommendation)
-trained.generate_vsjson(recommendation, ['TWTR', 'BBCT', 'PSFB', 'WFLG'])
-# print(trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG']))
-# print(len(trained.recommend(['TWTR', 'BBCT', 'PSFB', 'WFLG'])))
-# print(trained.recommend(['TAFF', 'PCSP', 'COLA', 'CRNT', 'BGMA', 'BEGG']))
+# print(trained.recommend(['WALK']))
+print(trained.recommend(['WALK', 'TNGS', 'OASI', 'WGPS']))
+print("ouput number is ", len(trained.recommend(['WALK', 'TNGS', 'OASI', 'WGPS'])))
 
-# trained = PAR_New(TRANSACTIONS2)
-# trained.generate_vsjson(trained.recommend(['a', 'b', 'd']), ['a', 'b', 'd'])
-# print(trained.recommend('a'))
-# print(trained.recommend('b'))
-# print(trained.recommend('c'))
-# print(trained.recommend(['a', 'b', 'd']))
-# print(trained.recommend(['a', 'b', 'c', 'd']))
-# print(trained.recommend(['a', 'f']))
